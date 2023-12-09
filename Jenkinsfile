@@ -1,69 +1,112 @@
 pipeline {
+ agent any
 
-    agent {
-        node {
-            label 'Pranav'
-        }
-    }
+    	        // Environment Variables
+	        environment {
+	        MAJOR = '1'
+	        MINOR = '0'
+	        //Orchestrator Services
+	        UIPATH_ORCH_URL = "https://staging.uipath.com/"
+	        UIPATH_ORCH_LOGICAL_NAME = "uipathmvp"
+	        UIPATH_ORCH_TENANT_NAME = "MVPtenant"
+	        UIPATH_ORCH_FOLDER_NAME = "Pranav"
+	    }
+	
 
-    options {
-        buildDiscarder logRotator( 
-                    daysToKeepStr: '16', 
-                    numToKeepStr: '10'
-            )
-    }
+	    stages {
+	
 
-    stages {
-        
-        stage('Cleanup Workspace') {
-            steps {
-                cleanWs()
-                sh """
-                echo "Cleaned Up Workspace For Project"
-                """
-            }
-        }
+	        // Printing Basic Information
+	        stage('Preparing'){
+	            steps {
+	                echo "Jenkins Home ${env.JENKINS_HOME}"
+	                echo "Jenkins URL ${env.JENKINS_URL}"
+	                echo "Jenkins JOB Number ${env.BUILD_NUMBER}"
+	                echo "Jenkins JOB Name ${env.JOB_NAME}"
+	                echo "GitHub BranhName ${env.BRANCH_NAME}"
+	                checkout scm
+	
 
-        stage('Code Checkout') {
-            steps {
-                checkout([
-                    $class: 'GitSCM', 
-                    branches: [[name: '*/main']], 
-                    userRemoteConfigs: [[url: 'https://github.com/spring-projects/spring-petclinic.git']]
-                ])
-            }
-        }
+	            }
+	        }
+	
 
-        stage(' Unit Testing') {
-            steps {
-                sh """
-                echo "Running Unit Tests"
-                """
-            }
-        }
+	         // Build Stages
+	        stage('Build') {
+	            steps {
+	                echo "Building..with ${WORKSPACE}"
+	                UiPathPack (
+                      outputPath: "Output\\${env.BUILD_NUMBER}",
+                      projectJsonPath: "project.json",
+                      version: [$class: 'ManualVersionEntry', version: "${MAJOR}.${MINOR}.${env.BUILD_NUMBER}"],
+                      useOrchestrator: false,
+					  traceLevel: 'None'
+        )
+	            }
+	        }
+	         // Test Stages
+	        stage('Test') {
+	            steps {
+	                echo 'Testing..the workflow...'
+	            }
+	        }
+	
 
-        stage('Code Analysis') {
-            steps {
-                sh """
-                echo "Running Code Analysis"
-                """
-            }
-        }
+	         // Deploy Stages
+	        stage('Deploy to UAT') {
+	            steps {
+	                echo "Deploying ${BRANCH_NAME} to UAT "
+                UiPathDeploy (
+                packagePath: "Output\\${env.BUILD_NUMBER}",
+                orchestratorAddress: "${UIPATH_ORCH_URL}",
+                orchestratorTenant: "${UIPATH_ORCH_TENANT_NAME}",
+                folderName: "${UIPATH_ORCH_FOLDER_NAME}",
+                environments: 'DEV',
+                //credentials: [$class: 'UserPassAuthenticationEntry', credentialsId: 'APIUserKey']
+                credentials: Token(accountName: "${UIPATH_ORCH_LOGICAL_NAME}", credentialsId: 'APIUserKey'), 
+				traceLevel: 'None',
+				entryPointPaths: 'Main.xaml'
+	
 
-        stage('Build Deploy Code') {
-            when {
-                branch 'develop'
-            }
-            steps {
-                sh """
-                echo "Building Artifact"
-                """
+	        )
+	            }
+	        }
+	
 
-                sh """
-                echo "Deploying Code"
-                """
-            }
-        }
+	
 
-    }   
-}
+	         // Deploy to Production Step
+	        stage('Deploy to Production') {
+	            steps {
+	                echo 'Deploy to Production'
+	                }
+	            }
+	    }
+	
+
+	    // Options
+	    options {
+	        // Timeout for pipeline
+	        timeout(time:80, unit:'MINUTES')
+	        skipDefaultCheckout()
+	    }
+	
+
+	
+
+	    // 
+	    post {
+	        success {
+	            echo 'Deployment has been completed!'
+	        }
+	        failure {
+	          echo "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.JOB_DISPLAY_URL})"
+	        }
+	        always {
+	            /* Clean workspace if success */
+	            cleanWs()
+	        }
+	    }
+	
+
+	}
