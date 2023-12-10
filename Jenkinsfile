@@ -9,7 +9,7 @@ pipeline {
 	        UIPATH_ORCH_URL = "https://staging.uipath.com/"
 	        UIPATH_ORCH_LOGICAL_NAME = "uipathmvp"
 	        UIPATH_ORCH_TENANT_NAME = "MVPtenant"
-	        UIPATH_ORCH_FOLDER_NAME = "Pranav"
+	        UIPATH_ORCH_FOLDER_NAME = "Shared"
 	    }
 	
 
