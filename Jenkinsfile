@@ -66,7 +66,7 @@ pipeline {
                 //credentials: [$class: 'UserPassAuthenticationEntry', credentialsId: 'APIUserKey']
                 credentials: Token(accountName: "${UIPATH_ORCH_LOGICAL_NAME}", credentialsId: 'CloudAPIKey'), 
 				traceLevel: 'None',
-				entryPointPaths: 'UiPathMeetup/Main.xaml',
+				entryPointPaths: 'Main.xaml',
 		createProcess: 'true'
 	
 
